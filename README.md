@@ -25,4 +25,12 @@
 <li> Сделать из приложения запрос на выборку 1000 значений из определенного диапазона вывести время работы (если время будет слишком мало увеличивать количество) </li>
   </ul>
 </li> 
+  <li>Сделать индекс на основе инвертированного списка над <i>Полем_3</i> (GIN индекс)</li>
+  <li>Придумать пример показывающий преимущества использования индекса на основе инвертированного списка для чего показать результат работы с индексом и без</li>
 </ul>
+
+<h3>Notes</h3>
+<p>For correct work of the programm in the database should be already exists <i>table_1</i> with <i>column_1, column_2, colum_3</i> fields. Column_1 and column_2 are int and column_3 is varchar(50).</p>
+<p>Extentions should be installed extentions in PostgreSQL:
+<code>CREATE EXTENSION pg_trgm;
+CREATE EXTENSION btree_gin;</code></p>
