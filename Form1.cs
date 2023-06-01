@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
 using System.Windows.Forms;
@@ -9,6 +10,20 @@ namespace DatabaseApp
     public partial class MainForm : Form
     {
         private string connectionString = "Server=localhost;Port=5432;Database=db;User Id=root;Password=root;";
+        Dictionary<int, string> words = new Dictionary<int, string>()
+        {
+            { 1, "Любить — значит видеть человека таким, каким его задумал Бог." },
+            { 2, "Неужели это горе всего одной души?!" },
+            { 3, "Внутри его души живут две силы, и они всегда сражаются друг с другом." },
+            { 4, "Иди своей дорогой, чтобы ты никогда не пришел в мое сердце." },
+            { 5, "Величие человека в его свободе выбора." },
+            { 6, "Все гении начинают с детства." },
+            { 7, "Надежда — это единственное, что остается у людей после потери всего." },
+            { 8, "Самое сложное в любви — найти в ней себя." },
+            { 9, "Мы все умрем, но некоторые из нас будут жить вечно в сердцах других людей." },
+            { 10, "Каждое новое утро — это возможность начать все с чистого листа." }
+        };
+        int INSERT_SIZE = 1000;
 
         public MainForm()
         {
@@ -42,6 +57,34 @@ namespace DatabaseApp
                 catch
                 {
                     return false;
+                }
+            }
+        }
+        //
+        // Вставка 1000 значечний
+        //
+        private void InsertData(int amount)
+        {
+            using (NpgsqlConnection connection = new NpgsqlConnection(connectionString))
+            {
+                connection.Open();
+
+                using (NpgsqlCommand command = new NpgsqlCommand("INSERT INTO Table_1 (Column_1, Column_2, Column_3) VALUES (@Column_1, @Column_2, @Column_3);", connection))
+                {
+                    Random random = new Random();
+                    Stopwatch stopwatch = Stopwatch.StartNew();
+
+                    for (int i = 0; i < amount; i++)
+                    {
+                        command.Parameters.AddWithValue("@Column_1", i + 1);
+                        command.Parameters.AddWithValue("@Column_2", random.Next(1, 4));
+                        command.Parameters.AddWithValue("@Column_3", words[random.Next(1, 11)]);
+                        command.ExecuteNonQuery();
+
+                        command.Parameters.Clear();
+                    }
+
+                    stopwatch.Stop();
                 }
             }
         }
@@ -205,7 +248,7 @@ namespace DatabaseApp
                     Stopwatch stopwatch = Stopwatch.StartNew();
 
                     int totalRecords = 350000;
-                    int batchSize = 1000;
+                    int batchSize = INSERT_SIZE;
                     int progress = 0;
 
                     progressBar.Visible = true;
@@ -225,7 +268,7 @@ namespace DatabaseApp
 
                             command.Parameters.AddWithValue("@Column_1", recordIndex + 1);
                             command.Parameters.AddWithValue("@Column_2", random.Next(1, 4));
-                            command.Parameters.AddWithValue("@Column_3", "Some random text");
+                            command.Parameters.AddWithValue("@Column_3", words[random.Next(1, 11)]);
                             command.ExecuteNonQuery();
 
                             command.Parameters.Clear();
@@ -268,6 +311,12 @@ namespace DatabaseApp
             // Создаем Б-дерево индекс
             CreateBtreeIndex();
 
+            // Вставляем INSERT_SIZE записей
+            Stopwatch insertTime = Stopwatch.StartNew();
+            InsertData(INSERT_SIZE);
+            insertTime.Stop();
+            resultBuilder.AppendLine("Время вставки с b-tree " + INSERT_SIZE + " записей: " + insertTime.Elapsed);
+
             // Делаем селект
             Stopwatch stopwatch = Stopwatch.StartNew();
             SelectWithBtreeIndex();
@@ -280,7 +329,7 @@ namespace DatabaseApp
             stopwatch.Stop();
             resultBuilder.AppendLine("Время на SELECT с B-tree индексом и диапазоном: " + stopwatch.Elapsed);
 
-            // Дропаем индекс Б-дерева
+            // Дропаем индекс b-tree
             using (NpgsqlConnection connection = new NpgsqlConnection(connectionString))
             {
                 connection.Open();
@@ -294,6 +343,12 @@ namespace DatabaseApp
             // Создаем хэш индекс
             CreateHashIndex();
 
+            // Вставляем INSERT_SIZE записей
+            insertTime.Restart();
+            InsertData(INSERT_SIZE);
+            insertTime.Stop();
+            resultBuilder.AppendLine("Время вставки с хэш-индексом " + INSERT_SIZE + " записей: " + insertTime.Elapsed);
+
             // Делаем селект
             stopwatch.Restart();
             SelectWithHashIndex();
@@ -306,7 +361,7 @@ namespace DatabaseApp
             stopwatch.Stop();
             resultBuilder.AppendLine("Время на SELECT с хэш-индексом и диапазоном: " + stopwatch.Elapsed);
 
-            // Дропаем хэш индекс
+            // Дропаем индекс
             using (NpgsqlConnection connection = new NpgsqlConnection(connectionString))
             {
                 connection.Open();
@@ -320,33 +375,79 @@ namespace DatabaseApp
             MessageBox.Show(resultBuilder.ToString());
         }
         //
-        // Вставка 1000 значечний
+        //Создание GIN индекса для поля 3
         //
-        private void insertButton_Click(object sender, EventArgs e)
+        private void CreateGINIndex()
         {
             using (NpgsqlConnection connection = new NpgsqlConnection(connectionString))
             {
                 connection.Open();
 
-                using (NpgsqlCommand command = new NpgsqlCommand("INSERT INTO Table_1 (Column_1, Column_2, Column_3) VALUES (@Column_1, @Column_2, @Column_3);", connection))
+                using (NpgsqlCommand createIndexCommand = new NpgsqlCommand("CREATE INDEX gin_idx ON Table_1 USING GIN (column_3)", connection))
                 {
-                    Random random = new Random();
+                    createIndexCommand.ExecuteNonQuery();
+                }
+            }
+        }
+        //
+        //
+        //
+        private void SelectGIN()
+        {
+            using (NpgsqlConnection connection = new NpgsqlConnection(connectionString))
+            {
+                connection.Open();
+
+                using (NpgsqlCommand command = new NpgsqlCommand("SELECT * FROM Table_1 WHERE column_3 @@ 'все:*';", connection)) // запрос выбирает все строки, где в третьем столбце есть слова, которые начинаюстя с "все"
+                {
+                    command.Parameters.AddWithValue("@value", 500);
+                    command.CommandTimeout = 0;
+
                     Stopwatch stopwatch = Stopwatch.StartNew();
 
-                    for (int i = 0; i < 1000; i++)
+                    using (NpgsqlDataReader reader = command.ExecuteReader())
                     {
-                        command.Parameters.AddWithValue("@Column_1", i + 1);
-                        command.Parameters.AddWithValue("@Column_2", random.Next(1, 4));
-                        command.Parameters.AddWithValue("@Column_3", "Some random text");
-                        command.ExecuteNonQuery();
-
-                        command.Parameters.Clear();
+                        while (reader.Read())
+                        {
+                            // Do something with the retrieved data
+                        }
                     }
 
                     stopwatch.Stop();
-                    MessageBox.Show("Время на вставку 1000 записей: " + stopwatch.Elapsed);
                 }
             }
+        }
+        private void GINindex_Click(object sender, EventArgs e)
+        {
+            StringBuilder resultBuilder = new StringBuilder();
+
+            // Select GIN index
+            Stopwatch stopwatchWithoutGIN = Stopwatch.StartNew();
+            SelectGIN();
+            stopwatchWithoutGIN.Stop();
+            resultBuilder.AppendLine("Время на SELECT без GIN индекса: " + stopwatchWithoutGIN.Elapsed);
+
+            // Create GIN index
+            CreateGINIndex();
+
+            // Select with GIN index
+            Stopwatch stopwatchWithGIN = Stopwatch.StartNew();
+            SelectGIN();
+            stopwatchWithGIN.Stop();
+            resultBuilder.AppendLine("Время на SELECT с GIN индексом: " + stopwatchWithGIN.Elapsed);
+
+            // Drop GIN index
+            using (NpgsqlConnection connection = new NpgsqlConnection(connectionString))
+            {
+                connection.Open();
+
+                using (NpgsqlCommand dropIndexCommand = new NpgsqlCommand("DROP INDEX gin_idx;", connection))
+                {
+                    dropIndexCommand.ExecuteNonQuery();
+                }
+            }
+
+            MessageBox.Show(resultBuilder.ToString());
         }
     }
 }
