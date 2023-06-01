@@ -134,14 +134,6 @@ namespace DatabaseApp
 
                     Stopwatch stopwatch = Stopwatch.StartNew();
 
-                    using (NpgsqlDataReader reader = command.ExecuteReader())
-                    {
-                        while (reader.Read())
-                        {
-                            
-                        }
-                    }
-
                     stopwatch.Stop();
             
                 }
@@ -162,14 +154,6 @@ namespace DatabaseApp
                     command.CommandTimeout = 0;
 
                     Stopwatch stopwatch = Stopwatch.StartNew();
-
-                    using (NpgsqlDataReader reader = command.ExecuteReader())
-                    {
-                        while (reader.Read())
-                        {
-                            
-                        }
-                    }
 
                     stopwatch.Stop();
                 }
@@ -192,14 +176,6 @@ namespace DatabaseApp
 
                     Stopwatch stopwatch = Stopwatch.StartNew();
 
-                    using (NpgsqlDataReader reader = command.ExecuteReader())
-                    {
-                        while (reader.Read())
-                        {
-                            
-                        }
-                    }
-
                     stopwatch.Stop();
                 }
             }
@@ -220,14 +196,6 @@ namespace DatabaseApp
                     command.CommandTimeout = 0;
 
                     Stopwatch stopwatch = Stopwatch.StartNew();
-
-                    using (NpgsqlDataReader reader = command.ExecuteReader())
-                    {
-                        while (reader.Read())
-                        {
-                            
-                        }
-                    }
 
                     stopwatch.Stop();
                 }
@@ -404,14 +372,6 @@ namespace DatabaseApp
                     command.CommandTimeout = 0;
 
                     Stopwatch stopwatch = Stopwatch.StartNew();
-
-                    using (NpgsqlDataReader reader = command.ExecuteReader())
-                    {
-                        while (reader.Read())
-                        {
-                           
-                        }
-                    }
 
                     stopwatch.Stop();
                 }
