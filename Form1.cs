@@ -138,7 +138,7 @@ namespace DatabaseApp
                     {
                         while (reader.Read())
                         {
-                            // Do something with the retrieved data
+                            
                         }
                     }
 
@@ -167,7 +167,7 @@ namespace DatabaseApp
                     {
                         while (reader.Read())
                         {
-                            // Do something with the retrieved data
+                            
                         }
                     }
 
@@ -196,7 +196,7 @@ namespace DatabaseApp
                     {
                         while (reader.Read())
                         {
-                            // Do something with the retrieved data
+                            
                         }
                     }
 
@@ -225,7 +225,7 @@ namespace DatabaseApp
                     {
                         while (reader.Read())
                         {
-                            // Do something with the retrieved data
+                            
                         }
                     }
 
@@ -409,7 +409,7 @@ namespace DatabaseApp
                     {
                         while (reader.Read())
                         {
-                            // Do something with the retrieved data
+                           
                         }
                     }
 
