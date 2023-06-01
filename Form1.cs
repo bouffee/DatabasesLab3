@@ -421,22 +421,22 @@ namespace DatabaseApp
         {
             StringBuilder resultBuilder = new StringBuilder();
 
-            // Select GIN index
+            // Выборка без GIN
             Stopwatch stopwatchWithoutGIN = Stopwatch.StartNew();
             SelectGIN();
             stopwatchWithoutGIN.Stop();
             resultBuilder.AppendLine("Время на SELECT без GIN индекса: " + stopwatchWithoutGIN.Elapsed);
 
-            // Create GIN index
+            // Создание GIN 
             CreateGINIndex();
 
-            // Select with GIN index
+            // Выборка с GIN 
             Stopwatch stopwatchWithGIN = Stopwatch.StartNew();
             SelectGIN();
             stopwatchWithGIN.Stop();
             resultBuilder.AppendLine("Время на SELECT с GIN индексом: " + stopwatchWithGIN.Elapsed);
 
-            // Drop GIN index
+            // Дроп GIN 
             using (NpgsqlConnection connection = new NpgsqlConnection(connectionString))
             {
                 connection.Open();
