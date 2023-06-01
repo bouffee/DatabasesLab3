@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Text;
 using System.Windows.Forms;
 using Npgsql;
 
@@ -26,7 +27,9 @@ namespace DatabaseApp
                 connectionStatusLabel.Text = "Соединения нет";
             }
         }
-
+        //
+        // Проверка соединения, пишет внизу экрана есть оно или нет. Нужно, потому что сервер запущен в докере и если докер не пашет - сервер тоже не пашет
+        //
         private bool IsServerConnected(string connectionString)
         {
             using (NpgsqlConnection connection = new NpgsqlConnection(connectionString))
@@ -42,7 +45,9 @@ namespace DatabaseApp
                 }
             }
         }
-
+        //
+        // создание b-tree индекса
+        //
         private void CreateBtreeIndex()
         {
             using (NpgsqlConnection connection = new NpgsqlConnection(connectionString))
@@ -55,7 +60,9 @@ namespace DatabaseApp
                 }
             }
         }
-
+        //
+        // создание хэш-индекса
+        //
         private void CreateHashIndex()
         {
             using (NpgsqlConnection connection = new NpgsqlConnection(connectionString))
@@ -68,34 +75,9 @@ namespace DatabaseApp
                 }
             }
         }
-
-        private void InsertData()
-        {
-            using (NpgsqlConnection connection = new NpgsqlConnection(connectionString))
-            {
-                connection.Open();
-
-                using (NpgsqlCommand command = new NpgsqlCommand("INSERT INTO Table_1 (column_1, column_2, column_3) VALUES (@column_1, @column_2, @column_3);", connection))
-                {
-                    Random random = new Random();
-                    Stopwatch stopwatch = Stopwatch.StartNew();
-
-                    for (int i = 0; i < 1000; i++)
-                    {
-                        command.Parameters.AddWithValue("@column_1", i + 1);
-                        command.Parameters.AddWithValue("@column_2", random.Next(1, 4));
-                        command.Parameters.AddWithValue("@column_3", "Some random text");
-                        command.ExecuteNonQuery();
-
-                        command.Parameters.Clear();
-                    }
-
-                    stopwatch.Stop();
-                    MessageBox.Show("Время на вставку 1000 записей: " + stopwatch.Elapsed);
-                }
-            }
-        }
-
+        //
+        // выборка с b-tree индексом
+        //
         private void SelectWithBtreeIndex()
         {
             using (NpgsqlConnection connection = new NpgsqlConnection(connectionString))
@@ -118,11 +100,13 @@ namespace DatabaseApp
                     }
 
                     stopwatch.Stop();
-                    MessageBox.Show("Время на SELECT с B-tree индексом: " + stopwatch.Elapsed);
+            
                 }
             }
         }
-
+        //
+        // выборка с хэш-индексом
+        //
         private void SelectWithHashIndex()
         {
             using (NpgsqlConnection connection = new NpgsqlConnection(connectionString))
@@ -145,11 +129,12 @@ namespace DatabaseApp
                     }
 
                     stopwatch.Stop();
-                    MessageBox.Show("Время на SELECT с хэш-индексом: " + stopwatch.Elapsed);
                 }
             }
         }
-
+        //
+        // Выбрать в диапозоне с b-tree индексом
+        //
         private void SelectWithRangeBtreeIndex()
         {
             using (NpgsqlConnection connection = new NpgsqlConnection(connectionString))
@@ -173,11 +158,12 @@ namespace DatabaseApp
                     }
 
                     stopwatch.Stop();
-                    MessageBox.Show("Время на SELECT с B-tree индексом и диапазоном: " + stopwatch.Elapsed);
                 }
             }
         }
-
+        //
+        // Выбрать в диапазоне с хэш-индексом
+        //
         private void SelectWithRangeHashIndex()
         {
             using (NpgsqlConnection connection = new NpgsqlConnection(connectionString))
@@ -201,11 +187,12 @@ namespace DatabaseApp
                     }
 
                     stopwatch.Stop();
-                    MessageBox.Show("Время на SELECT с хэш-индексом и диапазоном: " + stopwatch.Elapsed);
                 }
             }
         }
-
+        //
+        // Вставка 350000 значений (где-то 5 минут)
+        //
         private void insertMillionButton_Click(object sender, EventArgs e)
         {
             using (NpgsqlConnection connection = new NpgsqlConnection(connectionString))
@@ -255,10 +242,11 @@ namespace DatabaseApp
                 }
             }
         }
-
+        //
+        // Удаление данных и таблицы
+        //
         private void removeAllButton_Click(object sender, EventArgs e)
         {
-            // Remove all records from the table
             using (NpgsqlConnection connection = new NpgsqlConnection(connectionString))
             {
                 connection.Open();
@@ -270,19 +258,29 @@ namespace DatabaseApp
                 }
             }
         }
-
+        //
+        // Сравнение запросов
+        //
         private void compareQueriesButton_Click(object sender, EventArgs e)
         {
+            StringBuilder resultBuilder = new StringBuilder();
+
             // Создаем Б-дерево индекс
             CreateBtreeIndex();
 
             // Делаем селект
+            Stopwatch stopwatch = Stopwatch.StartNew();
             SelectWithBtreeIndex();
+            stopwatch.Stop();
+            resultBuilder.AppendLine("Время на SELECT с B-tree индексом: " + stopwatch.Elapsed);
 
             // Делаем селект с диапазоном
+            stopwatch.Restart();
             SelectWithRangeBtreeIndex();
+            stopwatch.Stop();
+            resultBuilder.AppendLine("Время на SELECT с B-tree индексом и диапазоном: " + stopwatch.Elapsed);
 
-            // Дропаем индекс
+            // Дропаем индекс Б-дерева
             using (NpgsqlConnection connection = new NpgsqlConnection(connectionString))
             {
                 connection.Open();
@@ -297,12 +295,18 @@ namespace DatabaseApp
             CreateHashIndex();
 
             // Делаем селект
+            stopwatch.Restart();
             SelectWithHashIndex();
+            stopwatch.Stop();
+            resultBuilder.AppendLine("Время на SELECT с хэш-индексом: " + stopwatch.Elapsed);
 
             // Делаем селект с диапазоном
+            stopwatch.Restart();
             SelectWithRangeHashIndex();
+            stopwatch.Stop();
+            resultBuilder.AppendLine("Время на SELECT с хэш-индексом и диапазоном: " + stopwatch.Elapsed);
 
-            // Дропаем индекс
+            // Дропаем хэш индекс
             using (NpgsqlConnection connection = new NpgsqlConnection(connectionString))
             {
                 connection.Open();
@@ -312,8 +316,12 @@ namespace DatabaseApp
                     dropIndexCommand.ExecuteNonQuery();
                 }
             }
-        }
 
+            MessageBox.Show(resultBuilder.ToString());
+        }
+        //
+        // Вставка 1000 значечний
+        //
         private void insertButton_Click(object sender, EventArgs e)
         {
             using (NpgsqlConnection connection = new NpgsqlConnection(connectionString))
