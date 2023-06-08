@@ -61,7 +61,7 @@ namespace DatabaseApp
             }
         }
         //
-        // Вставка 1000 значечний
+        // Вставка сколько хочешь значений значечний
         //
         private void InsertData(int amount)
         {
@@ -127,15 +127,12 @@ namespace DatabaseApp
             {
                 connection.Open();
 
-                using (NpgsqlCommand command = new NpgsqlCommand("SELECT * FROM Table_1 WHERE column_1 = @value;", connection))
+                using (NpgsqlCommand command = new NpgsqlCommand("SELECT * FROM Table_1 WHERE column_2 = @value;", connection))
                 {
-                    command.Parameters.AddWithValue("@value", 500);
+                    command.Parameters.AddWithValue("@value", 1);
                     command.CommandTimeout = 0;
 
-                    Stopwatch stopwatch = Stopwatch.StartNew();
-
-                    stopwatch.Stop();
-            
+                    command.ExecuteNonQuery();          
                 }
             }
         }
@@ -148,14 +145,13 @@ namespace DatabaseApp
             {
                 connection.Open();
 
-                using (NpgsqlCommand command = new NpgsqlCommand("SELECT * FROM Table_1 WHERE column_1 = @value;", connection))
+                using (NpgsqlCommand command = new NpgsqlCommand("SELECT * FROM Table_1 WHERE column_2 = @value;", connection))
                 {
-                    command.Parameters.AddWithValue("@value", 500);
+                    command.Parameters.AddWithValue("@value", 1);
                     command.CommandTimeout = 0;
 
-                    Stopwatch stopwatch = Stopwatch.StartNew();
+                    command.ExecuteNonQuery();
 
-                    stopwatch.Stop();
                 }
             }
         }
@@ -174,9 +170,7 @@ namespace DatabaseApp
                     command.Parameters.AddWithValue("@maxValue", 200);
                     command.CommandTimeout = 0;
 
-                    Stopwatch stopwatch = Stopwatch.StartNew();
-
-                    stopwatch.Stop();
+                    command.ExecuteNonQuery();
                 }
             }
         }
@@ -195,9 +189,7 @@ namespace DatabaseApp
                     command.Parameters.AddWithValue("@maxValue", 200);
                     command.CommandTimeout = 0;
 
-                    Stopwatch stopwatch = Stopwatch.StartNew();
-
-                    stopwatch.Stop();
+                    command.ExecuteNonQuery();
                 }
             }
         }
@@ -372,7 +364,7 @@ namespace DatabaseApp
                     command.CommandTimeout = 0;
 
                     Stopwatch stopwatch = Stopwatch.StartNew();
-
+                    command.ExecuteNonQuery();
                     stopwatch.Stop();
                 }
             }
