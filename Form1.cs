@@ -132,7 +132,13 @@ namespace DatabaseApp
                     command.Parameters.AddWithValue("@value", 1);
                     command.CommandTimeout = 0;
 
-                    command.ExecuteNonQuery();          
+                    using (NpgsqlDataReader reader = command.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            // Обработка текущей строки результата
+                        }
+                    }
                 }
             }
         }
@@ -150,7 +156,13 @@ namespace DatabaseApp
                     command.Parameters.AddWithValue("@value", 1);
                     command.CommandTimeout = 0;
 
-                    command.ExecuteNonQuery();
+                    using (NpgsqlDataReader reader = command.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            // Обработка текущей строки результата
+                        }
+                    }
 
                 }
             }
@@ -170,7 +182,13 @@ namespace DatabaseApp
                     command.Parameters.AddWithValue("@maxValue", 200);
                     command.CommandTimeout = 0;
 
-                    command.ExecuteNonQuery();
+                    using (NpgsqlDataReader reader = command.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            // Обработка текущей строки результата
+                        }
+                    }
                 }
             }
         }
@@ -189,7 +207,13 @@ namespace DatabaseApp
                     command.Parameters.AddWithValue("@maxValue", 200);
                     command.CommandTimeout = 0;
 
-                    command.ExecuteNonQuery();
+                    using (NpgsqlDataReader reader = command.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            // Обработка текущей строки результата
+                        }
+                    }
                 }
             }
         }
@@ -208,7 +232,7 @@ namespace DatabaseApp
                     Stopwatch stopwatch = Stopwatch.StartNew();
 
                     int totalRecords = 350000;
-                    int batchSize = INSERT_SIZE;
+                    int batchSize = 1000;
                     int progress = 0;
 
                     progressBar.Visible = true;
@@ -350,7 +374,7 @@ namespace DatabaseApp
             }
         }
         //
-        //
+        // SELECT c GIN
         //
         private void SelectGIN()
         {
@@ -363,9 +387,14 @@ namespace DatabaseApp
                     command.Parameters.AddWithValue("@value", 500);
                     command.CommandTimeout = 0;
 
-                    Stopwatch stopwatch = Stopwatch.StartNew();
-                    command.ExecuteNonQuery();
-                    stopwatch.Stop();
+                    using (NpgsqlDataReader reader = command.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            // Обработка текущей строки результата
+                        }
+                    }
+
                 }
             }
         }
