@@ -63,7 +63,7 @@ namespace DatabaseApp
         //
         // Вставка сколько хочешь значений значечний
         //
-        private void InsertData(int amount)
+        private TimeSpan InsertData(int amount)
         {
             using (NpgsqlConnection connection = new NpgsqlConnection(connectionString))
             {
@@ -85,6 +85,7 @@ namespace DatabaseApp
                     }
 
                     stopwatch.Stop();
+                    return stopwatch.Elapsed;
                 }
             }
         }
@@ -119,58 +120,41 @@ namespace DatabaseApp
             }
         }
         //
-        // выборка с b-tree индексом
+        // выборка 1000 произвольных значений
         //
-        private void SelectWithBtreeIndex()
+        private TimeSpan SimpleSelect()
         {
             using (NpgsqlConnection connection = new NpgsqlConnection(connectionString))
             {
                 connection.Open();
 
-                using (NpgsqlCommand command = new NpgsqlCommand("SELECT * FROM Table_1 WHERE column_2 = @value;", connection))
+                using (NpgsqlCommand command = new NpgsqlCommand("SELECT * FROM Table_1 WHERE column_1 = @value;", connection))
                 {
-                    command.Parameters.AddWithValue("@value", 1);
-                    command.CommandTimeout = 0;
+                    Random random = new Random(); //будет рандомно выбирать число для значения в столбце 2
+                    Stopwatch stopwatch = Stopwatch.StartNew();
 
-                    using (NpgsqlDataReader reader = command.ExecuteReader())
+                    for (int i = 0; i < 1000; i++)
                     {
-                        while (reader.Read())
+                        command.Parameters.AddWithValue("@value", random.Next(0, 350001));
+
+                        using (NpgsqlDataReader reader = command.ExecuteReader())
                         {
-                            // Обработка текущей строки результата
+                            while (reader.Read())
+                            {
+                                // Обработка текущей строки результата
+                            }
                         }
                     }
+
+                    stopwatch.Stop();
+                    return stopwatch.Elapsed;
                 }
             }
         }
         //
-        // выборка с хэш-индексом
+        // Выбрать в диапозоне
         //
-        private void SelectWithHashIndex()
-        {
-            using (NpgsqlConnection connection = new NpgsqlConnection(connectionString))
-            {
-                connection.Open();
-
-                using (NpgsqlCommand command = new NpgsqlCommand("SELECT * FROM Table_1 WHERE column_2 = @value;", connection))
-                {
-                    command.Parameters.AddWithValue("@value", 1);
-                    command.CommandTimeout = 0;
-
-                    using (NpgsqlDataReader reader = command.ExecuteReader())
-                    {
-                        while (reader.Read())
-                        {
-                            // Обработка текущей строки результата
-                        }
-                    }
-
-                }
-            }
-        }
-        //
-        // Выбрать в диапозоне с b-tree индексом
-        //
-        private void SelectWithRangeBtreeIndex()
+        private TimeSpan SelectWithRange()
         {
             using (NpgsqlConnection connection = new NpgsqlConnection(connectionString))
             {
@@ -178,42 +162,26 @@ namespace DatabaseApp
 
                 using (NpgsqlCommand command = new NpgsqlCommand("SELECT * FROM Table_1 WHERE column_1 BETWEEN @minValue AND @maxValue;", connection))
                 {
-                    command.Parameters.AddWithValue("@minValue", 100);
-                    command.Parameters.AddWithValue("@maxValue", 200);
-                    command.CommandTimeout = 0;
+                    Random random = new Random();
+                    Stopwatch stopwatch = Stopwatch.StartNew();
 
-                    using (NpgsqlDataReader reader = command.ExecuteReader())
+                    for (int i = 0; i < 1000; i++)
                     {
-                        while (reader.Read())
+                        int temp = random.Next(1, 200001);
+                        command.Parameters.AddWithValue("@minValue", temp);
+                        command.Parameters.AddWithValue("@maxValue", temp + 100000);
+
+                        using (NpgsqlDataReader reader = command.ExecuteReader())
                         {
-                            // Обработка текущей строки результата
+                            while (reader.Read())
+                            {
+                                // Обработка текущей строки результата
+                            }
                         }
                     }
-                }
-            }
-        }
-        //
-        // Выбрать в диапазоне с хэш-индексом
-        //
-        private void SelectWithRangeHashIndex()
-        {
-            using (NpgsqlConnection connection = new NpgsqlConnection(connectionString))
-            {
-                connection.Open();
 
-                using (NpgsqlCommand command = new NpgsqlCommand("SELECT * FROM Table_1 WHERE column_1 BETWEEN @minValue AND @maxValue;", connection))
-                {
-                    command.Parameters.AddWithValue("@minValue", 100);
-                    command.Parameters.AddWithValue("@maxValue", 200);
-                    command.CommandTimeout = 0;
-
-                    using (NpgsqlDataReader reader = command.ExecuteReader())
-                    {
-                        while (reader.Read())
-                        {
-                            // Обработка текущей строки результата
-                        }
-                    }
+                    stopwatch.Stop();
+                    return stopwatch.Elapsed;
                 }
             }
         }
@@ -292,26 +260,32 @@ namespace DatabaseApp
         {
             StringBuilder resultBuilder = new StringBuilder();
 
+            // Вставка без индекса
+            TimeSpan insertTimeWithout = InsertData(INSERT_SIZE);
+            resultBuilder.AppendLine("Время вставки без индекса " + INSERT_SIZE + " записей: " + insertTimeWithout);
+
+            // Простая выборка без индекса
+            TimeSpan timeSimpleSelectWithout = SimpleSelect();
+            resultBuilder.AppendLine("Время на SELECT без индекса " + timeSimpleSelectWithout);
+
+            // Выборка в диапозоне без индекса
+            TimeSpan timeRangeSelectWithout = SelectWithRange();
+            resultBuilder.AppendLine("Время на SELECT в диапозоне без индекса " + timeRangeSelectWithout);
+
             // Создаем Б-дерево индекс
             CreateBtreeIndex();
 
             // Вставляем INSERT_SIZE записей
-            Stopwatch insertTime = Stopwatch.StartNew();
-            InsertData(INSERT_SIZE);
-            insertTime.Stop();
-            resultBuilder.AppendLine("Время вставки с b-tree " + INSERT_SIZE + " записей: " + insertTime.Elapsed);
+            TimeSpan insertTime = InsertData(INSERT_SIZE);
+            resultBuilder.AppendLine("Время вставки с b-tree " + INSERT_SIZE + " записей: " + insertTime);
 
             // Делаем селект
-            Stopwatch stopwatch = Stopwatch.StartNew();
-            SelectWithBtreeIndex();
-            stopwatch.Stop();
-            resultBuilder.AppendLine("Время на SELECT с B-tree индексом: " + stopwatch.Elapsed);
+            TimeSpan timeBtreeSelect = SimpleSelect();
+            resultBuilder.AppendLine("Время на SELECT с B-tree индексом: " + timeBtreeSelect);
 
             // Делаем селект с диапазоном
-            stopwatch.Restart();
-            SelectWithRangeBtreeIndex();
-            stopwatch.Stop();
-            resultBuilder.AppendLine("Время на SELECT с B-tree индексом и диапазоном: " + stopwatch.Elapsed);
+            TimeSpan timeBtreeRange = SelectWithRange();
+            resultBuilder.AppendLine("Время на SELECT в диапозоне с B-tree индексом: " + timeBtreeRange);
 
             // Дропаем индекс b-tree
             using (NpgsqlConnection connection = new NpgsqlConnection(connectionString))
@@ -328,22 +302,16 @@ namespace DatabaseApp
             CreateHashIndex();
 
             // Вставляем INSERT_SIZE записей
-            insertTime.Restart();
-            InsertData(INSERT_SIZE);
-            insertTime.Stop();
-            resultBuilder.AppendLine("Время вставки с хэш-индексом " + INSERT_SIZE + " записей: " + insertTime.Elapsed);
+            TimeSpan insertTime2 = InsertData(INSERT_SIZE);
+            resultBuilder.AppendLine("Время вставки с хэш-индексом " + INSERT_SIZE + " записей: " + insertTime2);
 
             // Делаем селект
-            stopwatch.Restart();
-            SelectWithHashIndex();
-            stopwatch.Stop();
-            resultBuilder.AppendLine("Время на SELECT с хэш-индексом: " + stopwatch.Elapsed);
+            TimeSpan timeHashSelect = SimpleSelect();
+            resultBuilder.AppendLine("Время на SELECT с хэш-индексом: " + timeHashSelect);
 
             // Делаем селект с диапазоном
-            stopwatch.Restart();
-            SelectWithRangeHashIndex();
-            stopwatch.Stop();
-            resultBuilder.AppendLine("Время на SELECT с хэш-индексом и диапазоном: " + stopwatch.Elapsed);
+            TimeSpan timeHashRange = SelectWithRange();
+            resultBuilder.AppendLine("Время на SELECT в диапозоне с хэш-индексом: " + timeHashRange);
 
             // Дропаем индекс
             using (NpgsqlConnection connection = new NpgsqlConnection(connectionString))
@@ -376,7 +344,7 @@ namespace DatabaseApp
         //
         // SELECT c GIN
         //
-        private void SelectGIN()
+        private TimeSpan SelectGIN()
         {
             using (NpgsqlConnection connection = new NpgsqlConnection(connectionString))
             {
@@ -384,17 +352,20 @@ namespace DatabaseApp
 
                 using (NpgsqlCommand command = new NpgsqlCommand("SELECT * FROM Table_1 WHERE column_3 @@ 'все:*';", connection)) // запрос выбирает все строки, где в третьем столбце есть слова, которые начинаюстя с "все"
                 {
-                    command.Parameters.AddWithValue("@value", 500);
-                    command.CommandTimeout = 0;
+                    Stopwatch stopwatch = Stopwatch.StartNew();
 
-                    using (NpgsqlDataReader reader = command.ExecuteReader())
+                    for (int i = 0; i < 50; i++)
                     {
-                        while (reader.Read())
+                        using (NpgsqlDataReader reader = command.ExecuteReader())
                         {
-                            // Обработка текущей строки результата
+                            while (reader.Read())
+                            {
+                                // Обработка текущей строки результата
+                            }
                         }
                     }
-
+                    stopwatch.Stop();
+                    return stopwatch.Elapsed;
                 }
             }
         }
@@ -403,19 +374,15 @@ namespace DatabaseApp
             StringBuilder resultBuilder = new StringBuilder();
 
             // Выборка без GIN
-            Stopwatch stopwatchWithoutGIN = Stopwatch.StartNew();
-            SelectGIN();
-            stopwatchWithoutGIN.Stop();
-            resultBuilder.AppendLine("Время на SELECT без GIN индекса: " + stopwatchWithoutGIN.Elapsed);
+            TimeSpan timeWithoutGIN = SelectGIN();
+            resultBuilder.AppendLine("Время на SELECT без GIN индекса: " + timeWithoutGIN);
 
             // Создание GIN 
             CreateGINIndex();
 
             // Выборка с GIN 
-            Stopwatch stopwatchWithGIN = Stopwatch.StartNew();
-            SelectGIN();
-            stopwatchWithGIN.Stop();
-            resultBuilder.AppendLine("Время на SELECT с GIN индексом: " + stopwatchWithGIN.Elapsed);
+            TimeSpan timeWithGIN = SelectGIN();
+            resultBuilder.AppendLine("Время на SELECT с GIN индексом: " + timeWithGIN);
 
             // Дроп GIN 
             using (NpgsqlConnection connection = new NpgsqlConnection(connectionString))
