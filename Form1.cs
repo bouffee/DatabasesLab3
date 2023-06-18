@@ -335,7 +335,7 @@ namespace DatabaseApp
             {
                 connection.Open();
 
-                using (NpgsqlCommand createIndexCommand = new NpgsqlCommand("CREATE INDEX gin_idx ON Table_1 USING GIN (column_3)", connection))
+                using (NpgsqlCommand createIndexCommand = new NpgsqlCommand("CREATE INDEX gin_idx ON Table_1 USING GIN (to_tsvector('russian', column_3))", connection))
                 {
                     createIndexCommand.ExecuteNonQuery();
                 }
@@ -344,7 +344,35 @@ namespace DatabaseApp
         //
         // SELECT c GIN
         //
-        private TimeSpan SelectGIN()
+        private TimeSpan SelectWithGIN()
+        {
+            using (NpgsqlConnection connection = new NpgsqlConnection(connectionString))
+            {
+                connection.Open();
+
+                using (NpgsqlCommand command = new NpgsqlCommand("SELECT * FROM Table_1 WHERE to_tsvector(column_3) @@ to_tsquery('все:*');", connection)) // запрос выбирает все строки, где в третьем столбце есть слова, которые начинаюстя с "все"
+                {
+                    Stopwatch stopwatch = Stopwatch.StartNew();
+
+                    for (int i = 0; i < 50; i++)
+                    {
+                        using (NpgsqlDataReader reader = command.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                // Обработка текущей строки результата
+                            }
+                        }
+                    }
+                    stopwatch.Stop();
+                    return stopwatch.Elapsed;
+                }
+            }
+        }
+        /// 
+        /// SELECT без GIN
+        ///
+        private TimeSpan SelectWithoutGIN()
         {
             using (NpgsqlConnection connection = new NpgsqlConnection(connectionString))
             {
@@ -374,14 +402,14 @@ namespace DatabaseApp
             StringBuilder resultBuilder = new StringBuilder();
 
             // Выборка без GIN
-            TimeSpan timeWithoutGIN = SelectGIN();
+            TimeSpan timeWithoutGIN = SelectWithoutGIN();
             resultBuilder.AppendLine("Время на SELECT без GIN индекса: " + timeWithoutGIN);
 
             // Создание GIN 
             CreateGINIndex();
 
             // Выборка с GIN 
-            TimeSpan timeWithGIN = SelectGIN();
+            TimeSpan timeWithGIN = SelectWithGIN();
             resultBuilder.AppendLine("Время на SELECT с GIN индексом: " + timeWithGIN);
 
             // Дроп GIN 
