@@ -12,16 +12,16 @@ namespace DatabaseApp
         private string connectionString = "Server=localhost;Port=5432;Database=db;User Id=root;Password=root;";
         Dictionary<int, string> words = new Dictionary<int, string>()
         {
-            { 1, "Любить — значит видеть человека таким, каким его задумал Бог." },
-            { 2, "Неужели это горе всего одной души?!" },
-            { 3, "Внутри его души живут две силы, и они всегда сражаются друг с другом." },
-            { 4, "Иди своей дорогой, чтобы ты никогда не пришел в мое сердце." },
-            { 5, "Величие человека в его свободе выбора." },
-            { 6, "Все гении начинают с детства." },
-            { 7, "Надежда — это единственное, что остается у людей после потери всего." },
-            { 8, "Самое сложное в любви — найти в ней себя." },
-            { 9, "Мы все умрем, но некоторые из нас будут жить вечно в сердцах других людей." },
-            { 10, "Каждое новое утро — это возможность начать все с чистого листа." }
+            { 1, "It was a bright cold day, and the clocks were striking thirteen." },
+            { 2, "I have been bent and broken, but - I hope - into a better shape." },
+            { 3, "The man in black fled across the desert, and the gunslinger followed." },
+            { 4, "It is the first of November and so, today, someone will die." },
+            { 5, "You don't have to burn books to destroy a culture. Just get people to stop reading them." },
+            { 6, "Time, which sees all things, has found you out." },
+            { 7, "To the stars who listen— and the dreams that are answered." },
+            { 8, "The circus arrives without warning." },
+            { 9, "Sometimes it's necessary to start over, to begin anew." },
+            { 10, "He stepped down, trying not to look long at her, as if she were the sun, yet he saw her, like the sun, even without looking." }
         };
         int INSERT_SIZE = 1000;
 
@@ -335,7 +335,7 @@ namespace DatabaseApp
             {
                 connection.Open();
 
-                using (NpgsqlCommand createIndexCommand = new NpgsqlCommand("CREATE INDEX gin_idx ON Table_1 USING GIN (to_tsvector('russian', column_3))", connection))
+                using (NpgsqlCommand createIndexCommand = new NpgsqlCommand("CREATE INDEX IF NOT EXISTS gin_idx ON Table_1 USING GIN (column_3);", connection))
                 {
                     createIndexCommand.ExecuteNonQuery();
                 }
@@ -344,45 +344,17 @@ namespace DatabaseApp
         //
         // SELECT c GIN
         //
-        private TimeSpan SelectWithGIN()
+        private TimeSpan SelectGIN()
         {
             using (NpgsqlConnection connection = new NpgsqlConnection(connectionString))
             {
                 connection.Open();
 
-                using (NpgsqlCommand command = new NpgsqlCommand("SELECT * FROM Table_1 WHERE to_tsvector(column_3) @@ to_tsquery('все:*');", connection)) // запрос выбирает все строки, где в третьем столбце есть слова, которые начинаюстя с "все"
+                using (NpgsqlCommand command = new NpgsqlCommand("SELECT * FROM Table_1 WHERE column_3 @@ to_tsquery('a:*');", connection)) // запрос выбирает все строки, где в третьем столбце есть слова, которые начинаюстя с "все"
                 {
                     Stopwatch stopwatch = Stopwatch.StartNew();
 
-                    for (int i = 0; i < 50; i++)
-                    {
-                        using (NpgsqlDataReader reader = command.ExecuteReader())
-                        {
-                            while (reader.Read())
-                            {
-                                // Обработка текущей строки результата
-                            }
-                        }
-                    }
-                    stopwatch.Stop();
-                    return stopwatch.Elapsed;
-                }
-            }
-        }
-        /// 
-        /// SELECT без GIN
-        ///
-        private TimeSpan SelectWithoutGIN()
-        {
-            using (NpgsqlConnection connection = new NpgsqlConnection(connectionString))
-            {
-                connection.Open();
-
-                using (NpgsqlCommand command = new NpgsqlCommand("SELECT * FROM Table_1 WHERE column_3 @@ 'все:*';", connection)) // запрос выбирает все строки, где в третьем столбце есть слова, которые начинаюстя с "все"
-                {
-                    Stopwatch stopwatch = Stopwatch.StartNew();
-
-                    for (int i = 0; i < 50; i++)
+                    for (int i = 0; i < 15; i++)
                     {
                         using (NpgsqlDataReader reader = command.ExecuteReader())
                         {
@@ -401,15 +373,26 @@ namespace DatabaseApp
         {
             StringBuilder resultBuilder = new StringBuilder();
 
+            // приводим столбец 3 к типу данных tsvector для работы с GIN
+            using (NpgsqlConnection connection = new NpgsqlConnection(connectionString))
+            {
+                connection.Open();
+
+                using (NpgsqlCommand makeTsvector = new NpgsqlCommand("ALTER TABLE table_1 ALTER COLUMN column_3 TYPE tsvector USING column_3::tsvector;", connection))
+                {
+                    makeTsvector.ExecuteNonQuery();
+                }
+            }
+
             // Выборка без GIN
-            TimeSpan timeWithoutGIN = SelectWithoutGIN();
+            TimeSpan timeWithoutGIN = SelectGIN();
             resultBuilder.AppendLine("Время на SELECT без GIN индекса: " + timeWithoutGIN);
 
             // Создание GIN 
             CreateGINIndex();
 
             // Выборка с GIN 
-            TimeSpan timeWithGIN = SelectWithGIN();
+            TimeSpan timeWithGIN = SelectGIN();
             resultBuilder.AppendLine("Время на SELECT с GIN индексом: " + timeWithGIN);
 
             // Дроп GIN 
@@ -420,6 +403,17 @@ namespace DatabaseApp
                 using (NpgsqlCommand dropIndexCommand = new NpgsqlCommand("DROP INDEX gin_idx;", connection))
                 {
                     dropIndexCommand.ExecuteNonQuery();
+                }
+            }
+
+            //  Возврат к VARCHAR(200)
+            using (NpgsqlConnection connection = new NpgsqlConnection(connectionString))
+            {
+                connection.Open();
+
+                using (NpgsqlCommand makeTsvector = new NpgsqlCommand("ALTER TABLE table_1 ALTER COLUMN column_3 TYPE varchar(200);", connection))
+                {
+                    makeTsvector.ExecuteNonQuery();
                 }
             }
 
